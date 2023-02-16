@@ -4,6 +4,7 @@ const db = require('./db');
 const { Place, Thing, Souvenir, Person, conn } = db;
 
 app.use(express.urlencoded({ extended: false }));
+app.use(require('method-override')('_method'));
 
 
 app.get('/', async(req, res, next)=> {
@@ -100,6 +101,9 @@ app.get('/', async(req, res, next)=> {
                   <li>
                     A ${ souvenir.thing.name } was purchased by 
                     ${ souvenir.person.name } in ${ souvenir.place.name }
+                    <form method='POST' action='/souvenirs/${souvenir.id}?_method=delete'>
+                      <button>x</button>
+                    </form>
                   </li>
                 `;
               }).join('')
@@ -118,6 +122,17 @@ app.get('/', async(req, res, next)=> {
 app.post('/souvenirs', async(req, res, next)=> {
   try {
     await Souvenir.create(req.body);
+    res.redirect('/');
+  }
+  catch(ex){
+    next(ex);
+  }
+});
+
+app.delete('/souvenirs/:id', async(req, res, next)=> {
+  try {
+    const souvenir = await Souvenir.findByPk(req.params.id);
+    await souvenir.destroy();
     res.redirect('/');
   }
   catch(ex){
