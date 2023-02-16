@@ -3,12 +3,22 @@ const app = express();
 const db = require('./db');
 const { Place, Thing, Souvenir, Person, conn } = db;
 
+app.use(express.urlencoded({ extended: false }));
+
 
 app.get('/', async(req, res, next)=> {
   try {
+    //TODO - move these Promise.all
     const people = await Person.findAll();
     const places = await Place.findAll();
     const things = await Thing.findAll();
+    const souvenirs = await Souvenir.findAll({
+      include: [
+        Person,
+        Place,
+        Thing
+      ]
+    });
     res.send(`
       <html>
         <head>
@@ -52,10 +62,63 @@ app.get('/', async(req, res, next)=> {
               }).join('')
             }
           </ul>
+          <h2>Souvenirs</h2>
+          <form method='POST' action='/souvenirs'>
+            <select name='personId'>
+              ${
+                people.map( person => {
+                  return `
+                    <option value='${person.id}'>${ person.name }</option>
+                  `;
+                }).join('')
+              }
+            </select>
+            <select name='placeId'>
+              ${
+                places.map( place => {
+                  return `
+                    <option value='${place.id}'>${ place.name }</option>
+                  `;
+                }).join('')
+              }
+            </select>
+            <select name='thingId'>
+              ${
+                things.map( thing => {
+                  return `
+                    <option value='${thing.id}'>${ thing.name }</option>
+                  `;
+                }).join('')
+              }
+            </select>
+            <button>Create</button>
+          </form>
+          <ul>
+            ${
+              souvenirs.map( souvenir => {
+                return `
+                  <li>
+                    A ${ souvenir.thing.name } was purchased by 
+                    ${ souvenir.person.name } in ${ souvenir.place.name }
+                  </li>
+                `;
+              }).join('')
+            }
+          </ul>
         </body>
       </html>
     `);
 
+  }
+  catch(ex){
+    next(ex);
+  }
+});
+
+app.post('/souvenirs', async(req, res, next)=> {
+  try {
+    await Souvenir.create(req.body);
+    res.redirect('/');
   }
   catch(ex){
     next(ex);
